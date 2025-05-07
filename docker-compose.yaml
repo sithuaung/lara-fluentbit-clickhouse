@@ -38,14 +38,14 @@ services:
     volumes:
       - ./fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
       - ./fluent-bit/functions.lua:/fluent-bit/etc/functions.lua:ro
-    command: /fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.yaml
+    command: /fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.c
     depends_on:
       - clickhouse
     networks:
       - sail
 
   clickhouse:
-    image: clickhouse/clickhouse-server:23
+    image: clickhouse/clickhouse-server:25.4 
     ports:
       - "8123:8123"
       - '${CLICKHOUSE_PORT:-9000}:9000'
