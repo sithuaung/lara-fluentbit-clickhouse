@@ -46,7 +46,7 @@ services:
     image: clickhouse/clickhouse-server:23
     ports:
       - "8123:8123"
-      - "9000:9000"
+      - '${CLICKHOUSE_PORT:-9000}:9000'
     networks:
       - sail
 
