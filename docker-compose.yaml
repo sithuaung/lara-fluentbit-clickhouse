@@ -1,0 +1,92 @@
+services:
+  lara-app.test:
+    build:
+      context: ./lara-app/vendor/laravel/sail/runtimes/8.4
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: '${WWWGROUP:-1000}'
+    image: sail-8.4/lara-app
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '${LARA_APP_PORT:-8000}:80'
+      - '${LARA_APP_VITE_PORT:-5176}:5173'
+    environment:
+      WWWUSER: '${WWWUSER:-1000}'
+      LARAVEL_SAIL: 1
+      XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+      XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+      IGNITION_LOCAL_SITES_PATH: '${PWD}/lara-app-service'
+    volumes:
+      - './lara-app:/var/www/html'
+    networks:
+      - sail
+    depends_on:
+      - fluentbit
+      - clickhouse
+      - pgsql
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "host.docker.internal:24224"
+        tag: lara-app.test
+
+  fluentbit:
+    image: cr.fluentbit.io/fluent/fluent-bit:2.2
+    ports:
+      - "24224:24224"
+    volumes:
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    depends_on:
+      - clickhouse
+    networks:
+      - sail
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    networks:
+      - sail
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - clickhouse
+    networks:
+      - sail
+
+  pgsql:
+    image: 'postgres:15'
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: '${DB_USERNAME:-lara_app}'
+      POSTGRES_PASSWORD: '${DB_PASSWORD:-password}'
+      POSTGRES_DB_DATABASE: '${POSTGRES_DB_DATABASE:-lara_app}'
+    volumes:
+      - 'laravel-fluentbit-pgsql:/var/lib/postgresql/data'
+      - './create-database.sh:/docker-entrypoint-initdb.d/create-databases.sh'
+    networks:
+      - sail
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USERNAME:-lara_app}"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+
+networks:
+  sail:
+    driver: bridge
+
+volumes:
+  grafana-storage:
+  laravel-fluentbit-pgsql:
+    driver: local

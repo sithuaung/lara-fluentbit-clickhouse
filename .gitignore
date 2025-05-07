@@ -1,0 +1,5 @@
+lara-app/vendor/
+lara-app/node_modules/
+lara-app/storage/
+lara-app/bootstrap/cache/
+lara-app/public/storage/
