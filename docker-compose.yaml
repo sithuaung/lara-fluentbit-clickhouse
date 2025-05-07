@@ -36,7 +36,9 @@ services:
     ports:
       - "24224:24224"
     volumes:
-      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
+      - ./fluent-bit/functions.lua:/fluent-bit/etc/functions.lua:ro
+    command: /fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.yaml
     depends_on:
       - clickhouse
     networks:
@@ -89,4 +91,6 @@ networks:
 volumes:
   grafana-storage:
   laravel-fluentbit-pgsql:
+    driver: local
+  clickhouse-data:
     driver: local
