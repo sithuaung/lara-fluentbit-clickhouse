@@ -36,9 +36,9 @@ services:
     ports:
       - "24224:24224"
     volumes:
-      - ./fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./fluent-bit/functions.lua:/fluent-bit/etc/functions.lua:ro
-    command: /fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.c
+    command: /fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.conf
     depends_on:
       - clickhouse
     networks:
@@ -49,6 +49,8 @@ services:
     ports:
       - "8123:8123"
       - '${CLICKHOUSE_PORT:-9000}:9000'
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
     networks:
       - sail
 
