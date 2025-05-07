@@ -151,7 +151,7 @@ return [
     |
     */
 
-    'driver' => 'database',
+    'driver' => \App\AuditDrivers\StdErrDriver::class, # database <-- default
 
     /*
     |--------------------------------------------------------------------------
