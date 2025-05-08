@@ -1,202 +1,105 @@
-function fix_quotes(tag, timestamp, record)
-    local new_record = {}
-    
-    -- Copy all fields without the escaped quotes
-    for k, v in pairs(record) do
-        local clean_key = k:gsub('^\"\"', ''):gsub('\"\"$', '')
-        new_record[clean_key] = v
-    end
-    
-    -- Handle nested new_values if needed
-    if new_record.new_values and type(new_record.new_values) == "table" then
-        local clean_nested = {}
-        for nk, nv in pairs(new_record.new_values) do
-            local clean_nk = nk:gsub('^\"\"', ''):gsub('\"\"$', '')
-            clean_nested[clean_nk] = nv
-        end
-        new_record.new_values = clean_nested
-    end
-    
-    return 1, timestamp, new_record
-end
+function extract_audit_log(tag, timestamp, record)
+    print("Extract Audit Log")
 
--- function parse_metadata(tag, timestamp, record)
---     if record.new_values and record.new_values.metadata and type(record.new_values.metadata) == "string" then
---         local ok, json_data = pcall(function() 
---             return json.decode(record.new_values.metadata) 
---         end)
---         if ok then
---             record.new_values.metadata = json_data
---         end
---     end
---     return 1, timestamp, record
--- end
-
--- function parse_metadata(tag, timestamp, record)
---     if record.new_values and record.new_values.metadata and type(record.new_values.metadata) == "string" then
---         local ok, json_data = pcall(function() 
---             return json.decode(record.new_values.metadata) 
---         end)
---         if ok then
---             record.new_values.metadata = json_data
---         else
---             record.new_values.metadata = nil
---         end
---     end
---     return 1, timestamp, record
--- end
-
-function extract_and_fix_json(tag, timestamp, record)
-    -- First check if we have the log field
-    if not record.log then
-        return 1, timestamp, record
-    end
-    
-    -- Extract the JSON content from the log field
-    local json_str = record.log:match('StdErrLog%s+({.+})')
-    if not json_str then 
-        return 1, timestamp, record 
-    end
-    
-    -- Fix escaped quotes in the JSON string
-    json_str = json_str:gsub('\\"', '"')
-    
-    -- Parse the JSON
-    local ok, json_data = pcall(function() 
-        return json.decode(json_str) 
-    end)
-    if not ok then 
-        return 1, timestamp, record 
-    end
-    
-    -- Create new record with context fields promoted
-    local new_record = {}
-    if json_data.context then
-        for k, v in pairs(json_data.context) do
-            new_record[k] = v
-        end
-    end
-    
-    -- Parse metadata if exists
-    if new_record.new_values and 
-       new_record.new_values.metadata and 
-       type(new_record.new_values.metadata) == "string" then
-        local ok, meta = pcall(function() 
-            return json.decode(new_record.new_values.metadata) 
-        end)
-        if ok then
-            new_record.new_values.metadata = meta
-        else
-            new_record.new_values.metadata = nil
-        end
-    end
-    
-    return 1, timestamp, new_record
-end
-
-
-function extract_audit_data(tag, timestamp, record)
-    -- Case 1: Direct context available
-    if record.context then
-        local new_record = record.context
-        
-        -- Parse metadata if exists
-        if new_record.new_values and new_record.new_values.metadata then
-            local ok, meta = pcall(function() 
-                return json.decode(new_record.new_values.metadata) 
-            end)
-            if ok then new_record.new_values.metadata = meta end
-        end
-        
-        return 1, timestamp, new_record
+    -- Skip non-audit records
+    if not record.context and not (record.message == "StdErrLog") then
+        return -1, timestamp, record
     end
 
-    -- Case 2: StdErrLog format
-    if record.log then
+    -- Get the audit data from either format
+    local audit_data = record.context or {}
+    if not record.context and record.log then
         local json_str = record.log:match('StdErrLog%s+({.+})')
         if json_str then
-            local ok, json_data = pcall(function() 
-                return json.decode(json_str:gsub('\\"', '"')) 
-            end)
-            if ok and json_data.context then
-                -- Parse metadata
-                if json_data.context.new_values and json_data.context.new_values.metadata then
-                    local ok, meta = pcall(function() 
-                        return json.decode(json_data.context.new_values.metadata) 
-                    end)
-                    if ok then json_data.context.new_values.metadata = meta end
-                end
-                return 1, timestamp, json_data.context
+            local ok, parsed = pcall(json.decode, json_str)
+            if ok and parsed.context then
+                audit_data = parsed.context
             end
         end
     end
 
-    -- Fallthrough: return original if no match
-    return 1, timestamp, record
-end
+    -- Create your exact desired output structure
+    local result = {
+        old_values = audit_data.old_values or {},
+        new_values = audit_data.new_values or {},
+        event = audit_data.event,
+        auditable_id = audit_data.auditable_id,
+        auditable_type = audit_data.auditable_type,
+        user_id = audit_data.user_id,
+        user_type = audit_data.user_type,
+        tags = audit_data.tags,
+        ip_address = audit_data.ip_address,
+        user_agent = audit_data.user_agent,
+        url = audit_data.url,
+        service_name = audit_data.service_name,
+        version = audit_data.version,
+        source = audit_data.source,
+        event_time = audit_data.event_time
+    }
 
-function prepare_for_clickhouse(tag, timestamp, record)
-    -- Convert old_values to JSON string if it's a table
-    if type(record.old_values) == "table" then
-        record.old_values = json.encode(record.old_values)
-    elseif record.old_values == nil then
-        record.old_values = "[]"
+    -- Ensure metadata remains as string if it exists
+    if result.new_values and result.new_values.metadata and type(result.new_values.metadata) == "table" then
+        result.new_values.metadata = json.encode(result.new_values.metadata)
     end
 
-    -- Convert new_values to JSON string if it's a table
-    if type(record.new_values) == "table" then
-        -- Handle metadata if it exists
-        if record.new_values.metadata and type(record.new_values.metadata) == "table" then
-            record.new_values.metadata = json.encode(record.new_values.metadata)
-        end
-        record.new_values = json.encode(record.new_values)
-    elseif record.new_values == nil then
-        record.new_values = "{}"
-    end
-
-    -- Ensure all required fields are present
-    record.created_at = os.date("!%Y-%m-%d %H:%M:%S")
-    
-    return 1, timestamp, record
+    return 1, timestamp, result
 end
 
 function format_for_clickhouse(tag, timestamp, record)
-    -- Ensure required fields exist
-    record.created_at = os.date("!%Y-%m-%d %H:%M:%S")
-    
-    -- Properly escape JSON strings
-    local function escape_json(v)
-        if type(v) == "string" then
-            return v:gsub('"', '\\"')
-        end
-        return v
+    -- Log the incoming record
+    -- print("--- INCOMING RECORD ---")
+    -- for k, v in pairs(record) do
+    --     print(string.format("%s: %s", k, type(v) == "table" and "table" or tostring(v)))
+    -- end
+
+    -- Skip if no audit data (but log why)
+    if not record.context and not record.audit_data then
+        -- print("SKIPPING: No context or audit_data found")
+        return -1, timestamp, record
     end
 
-    -- Convert values to properly escaped JSON strings
-    record.old_values = type(record.old_values) == "table" and 
-                       json.encode(record.old_values) or 
-                       "[]"
-    
-    if type(record.new_values) == "table" then
-        -- Handle metadata separately
-        if record.new_values.metadata then
-            if type(record.new_values.metadata) == "string" then
-                -- Already stringified, just escape
-                record.new_values.metadata = escape_json(record.new_values.metadata)
-            else
-                record.new_values.metadata = json.encode(record.new_values.metadata)
-            end
+    -- Determine the audit data source
+    local audit_data = record.context or {}
+    if not record.context and record.audit_data then
+        local ok, parsed = pcall(json.decode, record.audit_data)
+        if ok then
+            audit_data = parsed
+        else
+            -- print("FAILED to parse audit_data: " .. tostring(record.audit_data))
+            return -1, timestamp, record
         end
-        record.new_values = json.encode(record.new_values)
-    else
-        record.new_values = "{}"
     end
-    
-    -- Remove problematic fields
-    record.date = nil
-    record.container_id = nil
-    record.container_name = nil
-    record.log = nil
-    
-    return 1, timestamp, record
+
+    -- Log the extracted audit data
+    -- print("--- AUDIT DATA ---")
+    -- for k, v in pairs(audit_data) do
+    --     print(string.format("%s: %s", k, type(v) == "table" and "table" or tostring(v)))
+    -- end
+
+    -- Create output (your exact desired format)
+    local result = {
+        -- old_values = audit_data.old_values or {},
+        old_values = audit_data.old_values and (type(audit_data.old_values) == "table" and
+            (next(audit_data.old_values) == nil and "[]" or json.encode(audit_data.old_values)) or audit_data.old_values) or
+            "[]",
+        new_values = audit_data.new_values or {},
+        event = audit_data.event,
+        auditable_id = audit_data.auditable_id,
+        auditable_type = audit_data.auditable_type,
+        ip_address = audit_data.ip_address,
+        user_agent = audit_data.user_agent,
+        url = audit_data.url,
+        service_name = audit_data.service_name,
+        version = audit_data.version,
+        source = audit_data.source,
+        event_time = audit_data.event_time
+    }
+
+    -- Log the final output
+    -- print("--- FINAL OUTPUT ---")
+    -- for k, v in pairs(result) do
+    --     print(string.format("%s: %s", k, type(v) == "table" and "table" or tostring(v)))
+    -- end
+
+    return 1, timestamp, result
 end
