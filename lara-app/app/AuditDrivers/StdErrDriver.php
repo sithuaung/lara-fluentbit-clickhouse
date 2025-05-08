@@ -29,7 +29,7 @@ class StdErrDriver implements AuditDriver
         ]);
 
         // Log to stderr with proper formatting
-        Log::channel('stderr')->info('Audit Log', $auditData);
+        Log::channel('stderr')->info('StdErrLog', $auditData);
 
         // Create and return an Audit model instance
         return new AuditModel($auditData);

@@ -32,12 +32,16 @@ services:
         tag: lara-app.test
 
   fluentbit:
-    image: cr.fluentbit.io/fluent/fluent-bit:2.2
+    # build:
+    #   context: ./fluent-bit
+    #   dockerfile: Dockerfile
+    image: fluent/fluent-bit:latest
     ports:
       - "24224:24224"
     volumes:
       - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./fluent-bit/functions.lua:/fluent-bit/etc/functions.lua:ro
+      - ./fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
     command: /fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.conf
     depends_on:
       - clickhouse
