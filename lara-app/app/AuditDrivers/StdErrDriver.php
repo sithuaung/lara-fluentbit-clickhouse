@@ -3,48 +3,85 @@
 namespace App\AuditDrivers;
 
 use Illuminate\Support\Facades\Log;
+use Monolog\Formatter\JsonFormatter;
+use Monolog\Handler\StreamHandler;
+use Monolog\Processor\PsrLogMessageProcessor;
 use OwenIt\Auditing\Contracts\Audit;
-use OwenIt\Auditing\Contracts\AuditDriver;
 use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Contracts\AuditDriver;
 use OwenIt\Auditing\Models\Audit as AuditModel;
 
 class StdErrDriver implements AuditDriver
 {
     /**
+     * The logger instance.
+     *
+     * @var \Illuminate\Log\Logger
+     */
+    protected $logger;
+
+    /**
+     * The name of the application.
+     *
+     * @var string
+     */
+    protected $appName;
+
+    const LOG_LABEL = 'StdErrLog';
+
+    /**
+     * Create a new instance of the audit driver.
+     */
+    public function __construct()
+    {
+        $this->appName = config('app.name') ?: 'unknown';
+        $this->logger = Log::build([
+            'driver' => 'monolog',
+            'level' => 'debug',
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
+            'formatter' => JsonFormatter::class,
+            'processors' => [PsrLogMessageProcessor::class],
+        ]);
+    }
+
+    /**
      * Perform an audit.
-     *
-     * @param \OwenIt\Auditing\Contracts\Auditable $model
-     *
-     * @return \OwenIt\Auditing\Contracts\Audit
      */
     public function audit(Auditable $model): Audit
     {
         $auditData = $model->toAudit();
 
-        $auditData = array_merge($auditData, [
-            'service_name' => 'Service-A',
-            'version' => '1.0',
-            'source' => 'Service-A',
-            'event_time' => now()->toDateTimeString(),
-        ]);
+        $auditData['service_name'] = $this->appName;
+        $auditData['event_time'] = now()->toIso8601String();
+        $correlationId = request()->header('X-CORRELATION-ID');
+        if ($correlationId !== null) {
+            $auditData['correlation_id'] = $correlationId;
+        }
 
-        // Log to stderr with proper formatting
-        Log::channel('stderr')->info('StdErrLog', $auditData);
+        $this->logger->info(self::LOG_LABEL, $this->sanitize($auditData));
 
-        // Create and return an Audit model instance
         return new AuditModel($auditData);
     }
 
     /**
      * Remove older audits that go over the threshold.
-     *
-     * @param \OwenIt\Auditing\Contracts\Auditable $model
-     *
-     * @return bool
      */
     public function prune(Auditable $model): bool
     {
-        // Since we're using stderr, we don't need to implement pruning
-        return true;
+        return false;
+    }
+
+    protected function sanitize(array $audit)
+    {
+        foreach (['old_values', 'new_values'] as $key) {
+            if (isset($audit[$key]) && is_array($audit[$key])) {
+                $audit[$key] = json_encode($audit[$key]);
+            }
+        }
+
+        return $audit;
     }
 }
