@@ -21,3 +21,8 @@ lara-app.test: [1746720806.000000000, {"message":"ClickHouseAuditLogger","contex
 lara-app.test: [1746720806.000000000, {"container_name":"/laravel-fluentbit-lara-app.test-1","log":"  2025-05-08 16:13:26 /create-record ............................... ~ 0.18ms","container_id":"d1c597c54faaea105eb5baef21a702f2f4de246fbdeca715551c1913cceebc41"}]
 lara-app.test: [1746720806.000000000, {"log":"  2025-05-08 16:13:26 /favicon.ico ................................. ~ 0.05ms","container_id":"d1c597c54faaea105eb5baef21a702f2f4de246fbdeca715551c1913cceebc41","container_name":"/laravel-fluentbit-lara-app.test-1"}]
 ```
+
+### Important TODO
+[] User_id and user_type can't save into clickhouse yet
+[] Check update event whether it's working or not
+[] Check how to receive alert when not saving
