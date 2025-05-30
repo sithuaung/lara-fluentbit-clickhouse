@@ -2,14 +2,14 @@ function extract_audit_log(tag, timestamp, record)
     print("Extract Audit Log")
 
     -- Skip non-audit records
-    if not record.context and not (record.message == "StdErrLog") then
+    if not record.context and not (record.message == "ClickHouseAuditLogger") then
         return -1, timestamp, record
     end
 
     -- Get the audit data from either format
     local audit_data = record.context or {}
     if not record.context and record.log then
-        local json_str = record.log:match('StdErrLog%s+({.+})')
+        local json_str = record.log:match('ClickHouseAuditLogger%s+({.+})')
         if json_str then
             local ok, parsed = pcall(json.decode, json_str)
             if ok and parsed.context then

@@ -53,7 +53,7 @@ function extract_and_fix_json(tag, timestamp, record)
     end
     
     -- Extract the JSON content from the log field
-    local json_str = record.log:match('StdErrLog%s+({.+})')
+    local json_str = record.log:match('ClickHouseAuditLogger%s+({.+})')
     if not json_str then 
         return 1, timestamp, record 
     end
@@ -111,9 +111,9 @@ function extract_audit_data(tag, timestamp, record)
         return 1, timestamp, new_record
     end
 
-    -- Case 2: StdErrLog format
+    -- Case 2: ClickHouseAuditLogger format
     if record.log then
-        local json_str = record.log:match('StdErrLog%s+({.+})')
+        local json_str = record.log:match('ClickHouseAuditLogger%s+({.+})')
         if json_str then
             local ok, json_data = pcall(function() 
                 return json.decode(json_str:gsub('\\"', '"')) 

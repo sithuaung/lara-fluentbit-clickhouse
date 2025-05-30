@@ -11,7 +11,7 @@ use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Contracts\AuditDriver;
 use OwenIt\Auditing\Models\Audit as AuditModel;
 
-class StdErrDriver implements AuditDriver
+class StderrAuditLogger implements AuditDriver
 {
     /**
      * The logger instance.
@@ -27,7 +27,7 @@ class StdErrDriver implements AuditDriver
      */
     protected $appName;
 
-    const LOG_LABEL = 'StdErrLog';
+    const LOG_LABEL = 'ClickHouseAuditLogger';
 
     /**
      * Create a new instance of the audit driver.
@@ -59,6 +59,11 @@ class StdErrDriver implements AuditDriver
         $correlationId = request()->header('X-CORRELATION-ID');
         if ($correlationId !== null) {
             $auditData['correlation_id'] = $correlationId;
+        }
+        $userId = request()->header('X-USER-ID');
+        if ($userId !== null) {
+            $auditData['user_type'] = request()->header('X-USER-TYPE', 'sso');
+            $auditData['user_id'] = $userId;
         }
 
         $this->logger->info(self::LOG_LABEL, $this->sanitize($auditData));
