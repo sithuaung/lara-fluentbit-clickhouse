@@ -9,5 +9,6 @@ Route::get('/', function () {
 });
 
 Route::get('/create-record', function () {
+    Log::channel('stderr')->info('Unwanted log example.');
     LoadTestData::factory()->create();
 });

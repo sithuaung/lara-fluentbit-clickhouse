@@ -56,6 +56,8 @@ class StderrAuditLogger implements AuditDriver
 
         $auditData['service_name'] = $this->appName;
         $auditData['event_time'] = now()->toIso8601String();
+        $auditData['user_id'] = "abcd21212121212";
+        $auditData['user_type'] = "App\SomeNamespace\SomeClass";
         $correlationId = request()->header('X-CORRELATION-ID');
         if ($correlationId !== null) {
             $auditData['correlation_id'] = $correlationId;
@@ -66,7 +68,7 @@ class StderrAuditLogger implements AuditDriver
             $auditData['user_id'] = $userId;
         }
 
-        $this->logger->info(self::LOG_LABEL, $this->sanitize($auditData));
+        $this->logger->info(self::LOG_LABEL, $auditData);
 
         return new AuditModel($auditData);
     }
@@ -79,14 +81,14 @@ class StderrAuditLogger implements AuditDriver
         return false;
     }
 
-    protected function sanitize(array $audit)
-    {
-        foreach (['old_values', 'new_values'] as $key) {
-            if (isset($audit[$key]) && is_array($audit[$key])) {
-                $audit[$key] = json_encode($audit[$key]);
-            }
-        }
+    // protected function sanitize(array $audit)
+    // {
+    //     foreach (['old_values', 'new_values'] as $key) {
+    //         if (isset($audit[$key]) && is_array($audit[$key])) {
+    //             $audit[$key] = json_encode($audit[$key]);
+    //         }
+    //     }
 
-        return $audit;
-    }
+    //     return $audit;
+    // }
 }

@@ -4,3 +4,4 @@ lara-app/storage/
 lara-app/bootstrap/cache/
 lara-app/public/storage/
 .idea/
+.DS_Store
