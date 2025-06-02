@@ -46,8 +46,8 @@ function format_for_clickhouse(tag, timestamp, record)
         version = audit_data.version,
         source = audit_data.source,
         event_time = audit_data.event_time,
-        -- user_id = audit_data.user_id,
-        -- user_type = audit_data.user_type
+        user_id = audit_data.user_id,
+        user_type = audit_data.user_type
     }
 
     -- Log the final output
