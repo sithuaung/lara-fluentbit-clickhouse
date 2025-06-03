@@ -10,24 +10,29 @@ use OwenIt\Auditing\Contracts\Audit;
 use OwenIt\Auditing\Contracts\Auditable;
 use OwenIt\Auditing\Contracts\AuditDriver;
 use OwenIt\Auditing\Models\Audit as AuditModel;
+use Psr\Log\LoggerInterface;
 
-class StderrAuditLogger implements AuditDriver
+class StderrAuditDriver implements AuditDriver
 {
-    /**
-     * The logger instance.
-     *
-     * @var \Illuminate\Log\Logger
-     */
-    protected $logger;
+    private const LOG_LABEL = 'app.audit';
+
+    private const HEADER_CORRELATION_ID = 'X-CORRELATION-ID';
+
+    private const HEADER_USER_ID = 'X-USER-ID';
+
+    private const HEADER_USER_TYPE = 'X-USER-TYPE';
+
+    private const DEFAULT_USER_TYPE = 'sso';
 
     /**
      * The name of the application.
-     *
-     * @var string
      */
-    protected $appName;
+    protected string $appName;
 
-    const LOG_LABEL = 'ClickHouseAuditLogger';
+    /**
+     * The logger instance.
+     */
+    protected LoggerInterface $logger;
 
     /**
      * Create a new instance of the audit driver.
@@ -35,7 +40,15 @@ class StderrAuditLogger implements AuditDriver
     public function __construct()
     {
         $this->appName = config('app.name') ?: 'unknown';
-        $this->logger = Log::build([
+        $this->logger = $this->createLogger();
+    }
+
+    /**
+     * Create and configure the logger instance.
+     */
+    protected function createLogger(): LoggerInterface
+    {
+        return Log::build([
             'driver' => 'monolog',
             'level' => 'debug',
             'handler' => StreamHandler::class,
@@ -48,26 +61,38 @@ class StderrAuditLogger implements AuditDriver
     }
 
     /**
+     * Prepare the audit data with additional context.
+     *
+     * @param  Auditable  $model  The model to audit
+     */
+    protected function prepareAuditData(Auditable $model): array
+    {
+        $auditData = $model->toAudit();
+        $request = request();
+
+        $auditData['service_name'] = $this->appName;
+        $auditData['occurred_at'] = now()->toIso8601String();
+
+        $correlationId = $request->header(self::HEADER_CORRELATION_ID);
+        if ($correlationId !== null) {
+            $auditData['correlation_id'] = $correlationId;
+        }
+
+        $userId = $request->header(self::HEADER_USER_ID);
+        if ($userId !== null) {
+            $auditData['user_id'] = $userId;
+            $auditData['user_type'] = $request->header(self::HEADER_USER_TYPE, self::DEFAULT_USER_TYPE);
+        }
+
+        return $auditData;
+    }
+
+    /**
      * Perform an audit.
      */
     public function audit(Auditable $model): Audit
     {
-        $auditData = $model->toAudit();
-
-        $auditData['service_name'] = $this->appName;
-        $auditData['event_time'] = now()->toIso8601String();
-        $auditData['user_id'] = "abcd21212121212";
-        $auditData['user_type'] = "App\SomeNamespace\SomeClass";
-        $correlationId = request()->header('X-CORRELATION-ID');
-        if ($correlationId !== null) {
-            $auditData['correlation_id'] = $correlationId;
-        }
-        $userId = request()->header('X-USER-ID');
-        if ($userId !== null) {
-            $auditData['user_type'] = request()->header('X-USER-TYPE', 'sso');
-            $auditData['user_id'] = $userId;
-        }
-
+        $auditData = $this->prepareAuditData($model);
         $this->logger->info(self::LOG_LABEL, $auditData);
 
         return new AuditModel($auditData);
@@ -80,15 +105,4 @@ class StderrAuditLogger implements AuditDriver
     {
         return false;
     }
-
-    // protected function sanitize(array $audit)
-    // {
-    //     foreach (['old_values', 'new_values'] as $key) {
-    //         if (isset($audit[$key]) && is_array($audit[$key])) {
-    //             $audit[$key] = json_encode($audit[$key]);
-    //         }
-    //     }
-
-    //     return $audit;
-    // }
 }

@@ -1,7 +1,7 @@
 function format_for_clickhouse(tag, timestamp, record)
     -- Discard the logs that are not StdErrLog
-    if type(record.message) ~= "string" or record.message ~= "ClickHouseAuditLogger" then
-        print("LUA_FILTER: Discarding record - 'message' is not 'ClickHouseAuditLogger'. Actual message: " .. tostring(record.message))
+    if type(record.message) ~= "string" or record.message ~= "app.audit" then
+        print("LUA_FILTER: Discarding record - 'message' is not 'app.audit'. Actual message: " .. tostring(record.message))
         return -1, timestamp, record
     end
 
@@ -45,7 +45,7 @@ function format_for_clickhouse(tag, timestamp, record)
         service_name = audit_data.service_name,
         version = audit_data.version,
         source = audit_data.source,
-        event_time = audit_data.event_time,
+        occurred_at = audit_data.occurred_at,
         user_id = audit_data.user_id,
         user_type = audit_data.user_type
     }
