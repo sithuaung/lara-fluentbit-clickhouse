@@ -38,8 +38,10 @@ function format_for_clickhouse(tag, timestamp, record)
         occurred_at = audit_data.occurred_at,
         auditable_type = audit_data.auditable_type,
         auditable_id = audit_data.auditable_id,
-        -- old_values =  json.encode(audit_data.old_values),
-        -- new_values = json.encode(audit_data.new_values),
+        old_values = audit_data.old_values and (type(audit_data.old_values) == "table" and
+            (next(audit_data.old_values) == nil and "[]" or audit_data.old_values) or audit_data.old_values) or
+            "[]",
+        new_values = audit_data.new_values,
         url = audit_data.url,
         ip_address = audit_data.ip_address,
         user_agent = audit_data.user_agent,
