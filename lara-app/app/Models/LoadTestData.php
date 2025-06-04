@@ -23,4 +23,17 @@ class LoadTestData extends Model implements AuditableContract
     {
         return LoadTestDataFactory::new();
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function generateTags(): array
+    {
+        return [
+            'test',
+            'load',
+            'performance',
+            'audit',
+        ];
+    }
 }

@@ -71,7 +71,7 @@ class StderrAuditDriver implements AuditDriver
         $request = request();
 
         $auditData['service_name'] = $this->appName;
-        $auditData['occurred_at'] = now()->toIso8601String();
+        $auditData['occurred_at'] = now('UTC')->format('Y-m-d H:i:s.v');
 
         $correlationId = $request->header(self::HEADER_CORRELATION_ID);
         if ($correlationId !== null) {
