@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS audits
     ip_address IPv6 CODEC(ZSTD(1)),
     user_agent String CODEC(ZSTD(1)),
     correlation_id Nullable(String) CODEC(ZSTD(1)),
-    tags Array(LowCardinality(String)) CODEC(ZSTD(1)),
+    tags Nullable(String) CODEC(ZSTD(1)),
     created_at DateTime64(3) DEFAULT now64(3) CODEC(DoubleDelta, ZSTD(1))
 )
 ENGINE = MergeTree()

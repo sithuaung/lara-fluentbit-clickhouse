@@ -38,19 +38,13 @@ function format_for_clickhouse(tag, timestamp, record)
         occurred_at = audit_data.occurred_at,
         auditable_type = audit_data.auditable_type,
         auditable_id = audit_data.auditable_id,
-        old_values = audit_data.old_values and (type(audit_data.old_values) == "table" and
-            (next(audit_data.old_values) == nil and "[]" or json.encode(audit_data.old_values)) or audit_data.old_values) or
-            "[]",
-        new_values = audit_data.new_values and (type(audit_data.new_values) == "table" and
-            (next(audit_data.new_values) == nil and "[]" or json.encode(audit_data.new_values)) or audit_data.new_values) or
-            "[]",
+        -- old_values =  json.encode(audit_data.old_values),
+        -- new_values = json.encode(audit_data.new_values),
         url = audit_data.url,
         ip_address = audit_data.ip_address,
         user_agent = audit_data.user_agent,
         correlation_id = audit_data.correlation_id,
-        tags = audit_data.tags and (type(audit_data.tags) == "table" and
-            (next(audit_data.tags) == nil and "[]" or json.encode(audit_data.tags)) or audit_data.tags) or
-            "[]",
+        tags = audit_data.tags,
     }
 
     -- Log the final output
