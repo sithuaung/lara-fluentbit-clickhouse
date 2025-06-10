@@ -1,0 +1,1 @@
+1 pod ~ 1 shard, cpu up to 4vCPU, mem up to 15Gi, 8Gi storage
