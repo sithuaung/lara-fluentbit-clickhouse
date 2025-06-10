@@ -1,37 +1,30 @@
-CREATE TABLE cmp.audits
+CREATE DATABASE IF NOT EXISTS cmp;
+
+USE cmp;
+
+CREATE TABLE IF NOT EXISTS audits
 (
-    -- Auto-increment ID - most efficient for limited resources
-    `id` UInt64 DEFAULT sipHash64(concat(toString(now64()), toString(rand()))),
-    
-    -- Keep optimized string columns
-    `service_name` LowCardinality(String) CODEC(LZ4),
-    `user_type` LowCardinality(String) DEFAULT '' CODEC(LZ4),
-    `user_id` String DEFAULT '' CODEC(LZ4),
-    `event` LowCardinality(String) CODEC(LZ4),
-    `occurred_at` DateTime CODEC(DoubleDelta, LZ4),
-    
-    -- Simplify nullable columns to reduce overhead
-    `auditable_type` LowCardinality(String) DEFAULT '' CODEC(LZ4),
-    `auditable_id` String DEFAULT '' CODEC(LZ4),
-    
-    -- Store JSON as String for better performance on writes
-    `old_values` String DEFAULT '' CODEC(ZSTD(1)),
-    `new_values` String DEFAULT '' CODEC(ZSTD(1)),
-    
-    -- Keep essential fields
-    `url` String CODEC(LZ4),
-    `ip_address` String CODEC(LZ4),  -- Changed from IPv6 to String for faster writes
-    `user_agent` String DEFAULT '' CODEC(LZ4),
-    `correlation_id` String DEFAULT '' CODEC(LZ4),
-    `tags` String DEFAULT '' CODEC(LZ4),
-    
-    -- Reduce precision for faster writes
-    `created_at` DateTime DEFAULT now() CODEC(DoubleDelta, LZ4)
+    id UInt64,
+    service_name LowCardinality(String) CODEC(LZ4),
+    user_type LowCardinality(String) DEFAULT '' CODEC(LZ4),
+    user_id String DEFAULT '' CODEC(LZ4),
+    event LowCardinality(String) CODEC(LZ4),
+    occurred_at DateTime CODEC(DoubleDelta, LZ4),
+    auditable_type LowCardinality(String) DEFAULT '' CODEC(LZ4), 
+    auditable_id String DEFAULT '' CODEC(LZ4),
+    old_values String DEFAULT '' CODEC(ZSTD(1)),
+    new_values String DEFAULT '' CODEC(ZSTD(1)),
+    url String CODEC(LZ4),
+    ip_address IPv6 CODEC(LZ4),
+    user_agent String DEFAULT '' CODEC(LZ4),
+    correlation_id String DEFAULT '' CODEC(LZ4),
+    tags String DEFAULT '' CODEC(LZ4),
+    created_at DateTime DEFAULT now() CODEC(DoubleDelta, LZ4)
 )
-ENGINE = MergeTree
+ENGINE = MergeTree()
 PARTITION BY (toYYYYMM(created_at))
 PRIMARY KEY (service_name, created_at)
-ORDER BY (service_name, created_at, id)  -- Keep id in ORDER BY for uniqueness
+ORDER BY (service_name, created_at, id)
 SETTINGS 
     -- Optimized for write performance on limited resources
     index_granularity = 16384,                    -- Larger granularity = fewer index entries
@@ -52,3 +45,6 @@ SETTINGS
     -- Write optimization
     min_bytes_for_wide_part = 104857600,          -- 100MB threshold for wide parts
     min_rows_for_wide_part = 1000000              -- 1M rows threshold
+
+
+
