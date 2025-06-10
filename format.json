@@ -1,0 +1,42 @@
+{
+    "message": "app.audit",
+    "context": {
+        "old_values": [],
+        "new_values": {
+            "id": "11e8828d-faf8-4eff-8b48-be5b15501701",
+            "name": "debitis ut deleniti",
+            "description": "Laboriosam et voluptate officia accusantium perspiciatis. Harum illum omnis recusandae nesciunt veritatis ratione.",
+            "quantity": 910,
+            "price": 679.83,
+            "is_active": true,
+            "metadata": "{\"tags\":[\"iusto\",\"et\",\"ducimus\"],\"features\":[\"cupiditate\",\"magni\",\"voluptatem\",\"rem\",\"quia\"],\"specifications\":{\"color\":\"Cyan\",\"size\":\"L\",\"weight\":7.32}}",
+            "purchase_date": "2025-05-25",
+            "purchase_time": "16:12:47",
+            "status": "completed",
+            "user_id": null,
+            "email": "mellie46@example.net",
+            "ip_address": "191.117.251.39",
+            "mac_address": "1B:C0:22:FF:C6:71",
+            "views_count": 5220,
+            "rating": 4.23,
+            "code": "AH7383LZ",
+            "year_created": "1993"
+        },
+        "event": "created",
+        "auditable_id": "11e8828d-faf8-4eff-8b48-be5b15501701",
+        "auditable_type": "App\\Models\\LoadTestData",
+        "user_id": null,
+        "user_type": null,
+        "tags": "test,load,performance,audit",
+        "ip_address": "192.168.65.1",
+        "user_agent": "curl/8.7.1",
+        "url": "http://localhost:8010/create-record",
+        "service_name": "Laravel",
+        "occurred_at": "2025-06-10 06:05:33.018"
+    },
+    "level": 200,
+    "level_name": "INFO",
+    "channel": "local",
+    "datetime": "2025-06-10T06:05:33.018807+00:00",
+    "extra": {}
+}

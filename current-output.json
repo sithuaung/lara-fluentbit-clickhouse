@@ -1,0 +1,16 @@
+{
+    "service_name": "Laravel",
+    "user_type": "",
+    "user_id": "",
+    "event": "created",
+    "occurred_at": "2025-06-10 05:51:00.695",
+    "auditable_type": "App\\Models\\LoadTestData",
+    "auditable_id": "67ed140a-9ac1-4f43-b2f6-77dcde1886a0",
+    "old_values": "[]",
+    "new_values": "{\"views_count\":9880,\"rating\":0.25,\"code\":\"WP5429TJ\",\"year_created\":\"2013\",\"id\":\"67ed140a-9ac1-4f43-b2f6-77dcde1886a0\",\"name\":\"modi aut et\",\"description\":\"Sunt voluptatem exercitationem ut. Et sapiente tempora tempore cum est autem dolores expedita. Perferendis perferendis error harum officiis similique. Praesentium itaque et enim.\",\"quantity\":289,\"price\":46.55,\"is_active\":true,\"metadata\":\"{\\\"tags\\\":[\\\"debitis\\\",\\\"eum\\\",\\\"voluptas\\\"],\\\"features\\\":[\\\"impedit\\\",\\\"dolores\\\",\\\"sit\\\",\\\"incidunt\\\",\\\"quisquam\\\"],\\\"specifications\\\":{\\\"color\\\":\\\"LavenderBlush\\\",\\\"size\\\":\\\"XL\\\",\\\"weight\\\":5.5}}\",\"status\":\"pending\",\"purchase_date\":\"2025-05-07\",\"purchase_time\":\"14:36:14\",\"ip_address\":\"67.250.234.45\",\"email\":\"moore.cicero@example.org\",\"mac_address\":\"D3:FF:C8:D3:C2:1B\"}",
+    "url": "http://localhost:8010/create-record",
+    "ip_address": "192.168.65.1",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+    "correlation_id": "",
+    "tags": "test,load,performance,audit"
+}

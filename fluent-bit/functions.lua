@@ -29,31 +29,167 @@ function format_for_clickhouse(tag, timestamp, record)
         print(string.format("%s: %s", k, type(v) == "table" and "table" or tostring(v)))
     end
 
-    -- Create output (your exact desired format)
+    -- Helper function to clean datetime strings
+    local function clean_datetime(dt_str)
+        if type(dt_str) == "string" then
+            -- Remove escaped quotes and clean up the string
+            dt_str = dt_str:gsub('\\"', '"')  -- Replace escaped quotes
+            dt_str = dt_str:gsub('^"', ''):gsub('"$', '')  -- Remove surrounding quotes
+            -- Remove microseconds for ClickHouse DateTime compatibility
+            dt_str = dt_str:gsub('%.%d+', '')  -- Remove .xxx part (microseconds)
+            return dt_str
+        end
+        return dt_str
+    end
+
+    -- Helper function to convert table to JSON string
+    local function table_to_json(tbl)
+        if type(tbl) ~= "table" then
+            return tostring(tbl or "")
+        end
+        
+        if next(tbl) == nil then
+            return "[]"
+        end
+        
+        -- Simple JSON encoding for basic table structures
+        local items = {}
+        local is_array = true
+        local count = 0
+        
+        -- Check if it's an array or object
+        for k, v in pairs(tbl) do
+            count = count + 1
+            if type(k) ~= "number" or k ~= count then
+                is_array = false
+                break
+            end
+        end
+        
+        if is_array then
+            -- Handle as array
+            for i, v in ipairs(tbl) do
+                if type(v) == "string" then
+                    local escaped = tostring(v):gsub('\\', '\\\\'):gsub('"', '\\"'):gsub('\n', '\\n'):gsub('\r', '\\r'):gsub('\t', '\\t')
+                    table.insert(items, '"' .. escaped .. '"')
+                elseif type(v) == "number" or type(v) == "boolean" then
+                    table.insert(items, tostring(v))
+                else
+                    table.insert(items, '"' .. tostring(v) .. '"')
+                end
+            end
+            return "[" .. table.concat(items, ",") .. "]"
+        else
+            -- Handle as object
+            for k, v in pairs(tbl) do
+                local key = '"' .. tostring(k):gsub('"', '\\"') .. '"'
+                local value
+                if type(v) == "string" then
+                    -- Escape all special characters for JSON
+                    local escaped = tostring(v):gsub('\\', '\\\\'):gsub('"', '\\"'):gsub('\n', '\\n'):gsub('\r', '\\r'):gsub('\t', '\\t')
+                    value = '"' .. escaped .. '"'
+                elseif type(v) == "number" or type(v) == "boolean" then
+                    value = tostring(v)
+                elseif v == nil then
+                    value = "null"
+                else
+                    value = '"' .. tostring(v) .. '"'
+                end
+                table.insert(items, key .. ":" .. value)
+            end
+            return "{" .. table.concat(items, ",") .. "}"
+        end
+    end
+
+    -- Helper function to properly encode JSON for ClickHouse
+    local function encode_for_clickhouse(val)
+        if type(val) == "table" then
+            if next(val) == nil then
+                return "[]"  -- Empty table becomes empty array
+            else
+                -- Build JSON manually with proper escaping
+                local items = {}
+                local is_array = true
+                local count = 0
+                
+                -- Check if it's an array
+                for k, v in pairs(val) do
+                    count = count + 1
+                    if type(k) ~= "number" or k ~= count then
+                        is_array = false
+                        break
+                    end
+                end
+                
+                if is_array then
+                    -- Handle as array
+                    for i, v in ipairs(val) do
+                        if type(v) == "string" then
+                            local escaped = tostring(v):gsub('\\', '\\\\\\\\'):gsub('"', '\\\\"')
+                            table.insert(items, '"' .. escaped .. '"')
+                        elseif type(v) == "number" or type(v) == "boolean" then
+                            table.insert(items, tostring(v))
+                        elseif v == nil then
+                            table.insert(items, "null")
+                        else
+                            table.insert(items, '"' .. tostring(v) .. '"')
+                        end
+                    end
+                    return "[" .. table.concat(items, ",") .. "]"
+                else
+                    -- Handle as object
+                    for k, v in pairs(val) do
+                        local key = '"' .. tostring(k):gsub('\\', '\\\\\\\\'):gsub('"', '\\\\"') .. '"'
+                        local value
+                        if type(v) == "string" then
+                            local escaped = tostring(v):gsub('\\', '\\\\\\\\'):gsub('"', '\\\\"')
+                            value = '"' .. escaped .. '"'
+                        elseif type(v) == "number" or type(v) == "boolean" then
+                            value = tostring(v)
+                        elseif v == nil then
+                            value = "null"
+                        else
+                            value = '"' .. tostring(v) .. '"'
+                        end
+                        table.insert(items, key .. ":" .. value)
+                    end
+                    return "{" .. table.concat(items, ",") .. "}"
+                end
+            end
+        elseif type(val) == "string" then
+            return val
+        else
+            return tostring(val or "")
+        end
+    end
+
+    -- Create output (your exact desired format)  
     local result = {
-        service_name = audit_data.service_name,
-        user_type = audit_data.user_type,
-        user_id = audit_data.user_id,
-        event = audit_data.event,
-        occurred_at = audit_data.occurred_at,
-        auditable_type = audit_data.auditable_type,
-        auditable_id = audit_data.auditable_id,
-        old_values = audit_data.old_values and (type(audit_data.old_values) == "table" and
-            (next(audit_data.old_values) == nil and "[]" or audit_data.old_values) or audit_data.old_values) or
-            "[]",
-        new_values = audit_data.new_values,
-        url = audit_data.url,
-        ip_address = audit_data.ip_address,
-        user_agent = audit_data.user_agent,
-        correlation_id = audit_data.correlation_id,
-        tags = audit_data.tags,
+        id = math.floor(timestamp * 1000) + math.random(1000, 9999), -- Generate unique ID based on timestamp
+        service_name = audit_data.service_name or "",
+        user_type = audit_data.user_type or "",
+        user_id = audit_data.user_id or "",
+        event = audit_data.event or "",
+        occurred_at = clean_datetime(audit_data.occurred_at) or "",
+        auditable_type = audit_data.auditable_type or "",
+        auditable_id = audit_data.auditable_id or "",
+        old_values = encode_for_clickhouse(audit_data.old_values),
+        new_values = encode_for_clickhouse(audit_data.new_values),
+        url = audit_data.url or "",
+        ip_address = audit_data.ip_address or "",
+        user_agent = audit_data.user_agent or "",
+        correlation_id = audit_data.correlation_id or "",
+        tags = audit_data.tags or "",
     }
 
     -- Log the final output
     print("LUA_FILTER: FINAL OUTPUT")
     for k, v in pairs(result) do
-        print(string.format("%s: %s", k, type(v) == "table" and "table" or tostring(v)))
+        print(string.format("%s: %s", k, tostring(v)))
     end
+    
+    -- Log that we're returning the result
+    print("LUA_FILTER: Returning result to Fluent Bit")
 
     return 1, timestamp, result
 end
