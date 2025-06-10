@@ -1,7 +1,7 @@
 CREATE TABLE cmp.audits
 (
     -- Auto-increment ID - most efficient for limited resources
-    `id` UInt64,
+    `id` UInt64 DEFAULT sipHash64(concat(toString(now64()), toString(rand()))),
     
     -- Keep optimized string columns
     `service_name` LowCardinality(String) CODEC(LZ4),
