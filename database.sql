@@ -4,7 +4,7 @@ USE cmp;
 
 CREATE TABLE IF NOT EXISTS audits
 (
-    id UInt64,
+    id UInt64 DEFAULT sipHash64(concat(toString(now64()), toString(rand()))),
     service_name LowCardinality(String) CODEC(LZ4),
     user_type LowCardinality(String) DEFAULT '' CODEC(LZ4),
     user_id String DEFAULT '' CODEC(LZ4),
